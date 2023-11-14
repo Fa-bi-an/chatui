@@ -8,6 +8,8 @@ from langchain.memory import ConversationBufferMemory
 from langchain.memory.chat_message_histories import StreamlitChatMessageHistory
 from langchain.prompts import PromptTemplate
 
+from chatui.interactions.example_prompts import _run_example, generate_random_prompt
+from chatui.interactions.salutations import get_time_based_greeting
 from chatui.utils import get_project_root
 
 
@@ -33,30 +35,17 @@ def set_streamlit_config():
     st.title("📖 StreamlitChatMessageHistory")
 
 
-def _run_example(
-    llm_chain, key, user_input: str = "Tell me a fun fact about the roman empire"
-):
-    st.caption(user_input)
-    st.button("▶️", on_click=lambda: llm_chain.run(user_input), key=key)
-
-
 def get_and_show_examples(llm_chain):
     """show examples of what the model can do"""
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write("__Tell me a fun fact__")
-        example = "Tell me a fun fact about the roman empire"
-        _run_example(llm_chain, key="col1", user_input=example)
 
-    with col2:
-        st.write("__Tell me a fun fact__")
-        example = "Tell me a fun fact about the micky mouse"
-        _run_example(llm_chain, key="col2", user_input=example)
+    for col in [col1, col2, col3]:
+        examples = generate_random_prompt()
 
-    with col3:
-        st.write("__Tell me a fun fact__")
-        example = "Tell me a fun fact about the the universe"
-        _run_example(llm_chain, key="col3", user_input=example)
+        with col:
+            example = examples[-1]
+            examples.pop()
+            _run_example(llm_chain, key=str(col), user_input=example)
 
 
 def display_intro_message():
@@ -76,7 +65,7 @@ def initialize_memory():
     msgs = StreamlitChatMessageHistory(key="langchain_messages")
     memory = ConversationBufferMemory(chat_memory=msgs)
     if len(msgs.messages) == 0:
-        msgs.add_ai_message("How can I help you?")
+        msgs.add_ai_message(f"{get_time_based_greeting()} How can I support you?")
     return msgs, memory
 
 
@@ -99,7 +88,13 @@ def get_llm_chain(api_key, memory):
     prompt = PromptTemplate(
         input_variables=["history", "human_input"], template=template
     )
-    return LLMChain(llm=OpenAI(openai_api_key=api_key, ), prompt=prompt, memory=memory)
+    return LLMChain(
+        llm=OpenAI(
+            openai_api_key=api_key,
+        ),
+        prompt=prompt,
+        memory=memory,
+    )
 
 
 def render_chat_messages(msgs):
