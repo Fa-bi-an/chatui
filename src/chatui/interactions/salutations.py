@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 def get_time_based_greeting():
     """
     Returns a greeting message based on the current time of day.
@@ -22,9 +23,6 @@ def get_time_based_greeting():
         return "Good evening!"
     else:
         return "Good night!"
-
-
-
 
 
 if __name__ == "__main__":
