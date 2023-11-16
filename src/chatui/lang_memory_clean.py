@@ -73,9 +73,7 @@ def fetch_openai_key():
     dotenv.load_dotenv(get_project_root() / ".env")
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
-        raise Exception(
-            "OpenAI API-Key wurde nicht gefunden. Bitte überprüfen Sie Ihre .env-Datei."
-        )
+        raise Exception("The OpenAI API-Keywas not found. Please check your .env-file.")
     return openai_api_key
 
 
@@ -99,7 +97,7 @@ def get_llm_chain(api_key, memory):
 
 def render_chat_messages(msgs):
     for msg in msgs.messages:
-        st.chat_message(msg.type).write(msg.content)
+        st.chat_message(msg.type).markdown(msg.content)
 
 
 def handle_user_input(llm_chain, msgs):
@@ -121,9 +119,9 @@ def handle_user_input(llm_chain, msgs):
             )
 
         else:
-            st.chat_message("human").write(user_input)
+            st.chat_message("human").markdown(user_input)
             response = llm_chain.run(user_input)
-            st.chat_message("ai").write(response)
+            st.chat_message("ai").markdown(response)
 
 
 def display_memory_contents():
