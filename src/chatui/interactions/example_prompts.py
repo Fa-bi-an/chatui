@@ -27,6 +27,7 @@ def generate_random_prompt(n: int = 3):
         "__Tell__ me a fun fact about the roman empire",
         "__Tell__ me a fun fact about the micky mouse",
         "__Tell__ me a fun fact about the the universe",
+        "__Translate__ this python function to javascript '''print('hello world'))''' ",
     ]
 
     if n > len(sample_prompts):
