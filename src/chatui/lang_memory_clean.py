@@ -2,7 +2,10 @@ import os
 
 import dotenv
 import streamlit as st
+from langchain.callbacks import StdOutCallbackHandler
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains import LLMChain
+from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.memory.chat_message_histories import StreamlitChatMessageHistory
@@ -11,6 +14,18 @@ from langchain.prompts import PromptTemplate
 from chatui.interactions.example_prompts import _run_example, generate_random_prompt
 from chatui.interactions.salutations import get_time_based_greeting
 from chatui.utils import get_project_root
+
+
+class StreamHandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text=""):
+        self.container = container
+        self.text = initial_text
+
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        # "/" is a marker to show difference
+        # you don't need it
+        self.text += token + "/"
+        self.container.markdown(self.text)
 
 
 def set_model() -> str:
@@ -25,9 +40,9 @@ def set_model() -> str:
         )
 
     if model_version:
-        return "gpt4"
+        return "gpt-4"
     else:
-        return "gpt3"
+        return "gpt-3.5-turbo"
 
 
 def set_streamlit_config():
@@ -35,7 +50,7 @@ def set_streamlit_config():
     st.title("📖 StreamlitChatMessageHistory")
 
 
-def get_and_show_examples(llm_chain):
+def get_and_show_examples(_llm_chain):
     """show examples of what the model can do"""
     col1, col2, col3 = st.columns(3)
 
@@ -45,7 +60,7 @@ def get_and_show_examples(llm_chain):
         with col:
             example = examples[-1]
             examples.pop()
-            _run_example(llm_chain, key=str(col), user_input=example)
+            _run_example(_llm_chain, key=str(col), user_input=example)
 
 
 def display_intro_message():
@@ -77,8 +92,8 @@ def fetch_openai_key():
     return openai_api_key
 
 
-def get_llm_chain(api_key, memory):
-    template = """You are an AI chatbot having a conversation with a human.
+def get_llm_chain(api_key, memory, model):
+    template = """You are an polite, funny and helpful AI chatbot having a conversation with a human.
 
     {history}
     Human: {human_input}
@@ -87,8 +102,8 @@ def get_llm_chain(api_key, memory):
         input_variables=["history", "human_input"], template=template
     )
     return LLMChain(
-        llm=OpenAI(
-            openai_api_key=api_key,
+        llm=ChatOpenAI(
+            openai_api_key=api_key, streaming=True, model=model, verbose=True
         ),
         prompt=prompt,
         memory=memory,
@@ -98,6 +113,19 @@ def get_llm_chain(api_key, memory):
 def render_chat_messages(msgs):
     for msg in msgs.messages:
         st.chat_message(msg.type).markdown(msg.content)
+
+
+def render_chat(msgs):
+    for msg in msgs.messages:
+        if msg.type == "human":
+            with st.chat_message("human", avatar="👤"):
+                st.markdown(msg.content)
+        elif msg.type == "ai":
+            with st.chat_message("ai", avatar="🤖"):
+                st.markdown(msg.content)
+        else:
+            st.write(msg.type)
+            st.markdown(msg.content)
 
 
 def handle_user_input(llm_chain, msgs):
@@ -112,16 +140,14 @@ def handle_user_input(llm_chain, msgs):
             msgs.add_ai_message("`/img:` command detected")
 
         elif user_input.startswith("/"):
-            msgs.add_ai_message(
-                "List of commands: <br>\
-                                - `/img:` command detected <br>\
-                                - `/qa:` command detected"
+            msgs.add_system_message(
+                """ __List of commands:__ \
+                - `/img:` command detected \
+                - `/qa:` command detected"""
             )
 
         else:
-            st.chat_message("human").markdown(user_input)
-            response = llm_chain.run(user_input)
-            st.chat_message("ai").markdown(response)
+            llm_chain.run(user_input)
 
 
 def display_memory_contents():
@@ -138,6 +164,8 @@ def display_memory_contents():
         """
         )
         st.json(st.session_state.langchain_messages)
+        st.write(st.session_state.langchain_messages[0])
+        st.write(type(st.session_state.langchain_messages[0]))
 
 
 def main():
@@ -145,11 +173,12 @@ def main():
     model = set_model()
     msgs, memory = initialize_memory()
     api_key = fetch_openai_key()
-    llm_chain = get_llm_chain(api_key, memory)
+    llm_chain = get_llm_chain(api_key, memory, model)
     get_and_show_examples(llm_chain)
     handle_user_input(llm_chain, msgs)
     display_memory_contents()
-    render_chat_messages(msgs)
+    # render_chat_messages(msgs)
+    render_chat(msgs)
 
 
 if __name__ == "__main__":
