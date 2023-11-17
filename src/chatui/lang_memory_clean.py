@@ -2,8 +2,6 @@ import os
 
 import dotenv
 import streamlit as st
-from langchain.callbacks import StdOutCallbackHandler
-from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
@@ -14,18 +12,9 @@ from langchain.prompts import PromptTemplate
 from chatui.interactions.example_prompts import _run_example, generate_random_prompt
 from chatui.interactions.salutations import get_time_based_greeting
 from chatui.utils import get_project_root
+from chatui.interactions.stream_handler import StreamHandler
 
 
-class StreamHandler(BaseCallbackHandler):
-    def __init__(self, container, initial_text=""):
-        self.container = container
-        self.text = initial_text
-
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
-        # "/" is a marker to show difference
-        # you don't need it
-        self.text += token + "/"
-        self.container.markdown(self.text)
 
 
 def set_model() -> str:
@@ -103,10 +92,11 @@ def get_llm_chain(api_key, memory, model):
     )
     return LLMChain(
         llm=ChatOpenAI(
-            openai_api_key=api_key, streaming=True, model=model, verbose=True
+            openai_api_key=api_key, streaming=True, model=model
         ),
         prompt=prompt,
         memory=memory,
+        verbose=True
     )
 
 
